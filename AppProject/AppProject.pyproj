@@ -46,11 +46,7 @@
     <Compile Include="test\app2.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="oldSite\PagesApp1.py" />
     <Compile Include="test\app1.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="oldSite\navbar1.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="test\FadeTest.py">
@@ -69,7 +65,6 @@
   <ItemGroup>
     <Folder Include="assets\" />
     <Folder Include="assets\images\" />
-    <Folder Include="oldSite\" />
     <Folder Include="test\" />
     <Folder Include="test\assets\" />
   </ItemGroup>
@@ -79,12 +74,7 @@
     <Content Include="assets\images\pufff.svg" />
     <Content Include="assets\style.css" />
     <Content Include="assets\unnamed.png" />
-    <Content Include="oldSite\custom-script1.js" />
-    <Content Include="oldSite\favicon1.ico" />
-    <Content Include="oldSite\header1.css" />
     <Content Include="test\assets\css3.css" />
-    <Content Include="oldSite\typography1.css" />
-    <Content Include="oldSite\unnamed1.png" />
     <Content Include="test\assets\custom-script.js" />
   </ItemGroup>
   <ItemGroup>
