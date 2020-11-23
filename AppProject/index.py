@@ -12,110 +12,6 @@ from dash.dependencies import Input, Output, State
 
 import pyodbc
 
-p_conn = psycopg2.connect(dbname="Prototype",user="postgres",password="pswd", host="localhost")
-s_conn = pyodbc.connect('Driver={SQL Server};Server=192.168.10.11;Database=EDC_ASKUE;UID=sa;PWD=ZAQ!2wsx')
-
-
-def read_key_params(table,id):
-    ch = []
-    p_cur = p_conn.cursor()
-    p_cur.execute(f"""SELECT "formula" FROM "key_parameters" WHERE "object_type" = '{table}' AND "object_id" = {id}""")
-    fs = p_cur.fetchall()
-    for i in fs:
-        str = i[0].split(';')
-        val = 0
-        for j in str:
-            s_cur = s_conn.cursor()
-            s = j[1:]
-            s_cur.execute(f"""SELECT ppt."ParamName", SUM(pm."Val"), u."StandartName" FROM "PointParams" pp JOIN "PointMains" pm ON pp."ID_PP" = pm."ID_PP" JOIN "PointParamTypes" ppt ON pp."ID_Param" = ppt."ID_Param" JOIN "ValueTypes" vt ON vt."ID_ValueType" = ppt."ID_ValueType" JOIN "Units" u ON u."ID_Units" = vt."ID_BaseUnits" WHERE pp."ID_PP" = {s} AND pm."DT" >= '2020-10-01' AND pm."DT" < '2020-11-01' GROUP BY ppt."ParamName", u.StandartName """)
-            result = s_cur.fetchone()
-            if (result[1] < 0):
-                v = format(result[1])
-            else:
-                v = j[:1]+format(result[1])
-            val += float(v)
-        ch.append(val)
-        ch.append(html.Br())
-    body = html.Div(children=ch)
-    return body
-
-def generate_low_level_structures(id, value):
-    params = []
-    s_df = pd.read_sql("""SELECT ppt."ParamName", SUM(pm."Val"), u."StandartName" FROM "PointParams" pp JOIN "PointMains" pm ON pp."ID_PP" = pm."ID_PP" JOIN "PointParamTypes" ppt ON pp."ID_Param" = ppt."ID_Param" JOIN "ValueTypes" vt ON vt."ID_ValueType" = ppt."ID_ValueType" JOIN "Units" u ON u."ID_Units" = vt."ID_BaseUnits" WHERE pp."ID_Point" = {} AND pm."DT" > '2020-11-01' GROUP BY ppt."ParamName", u.StandartName """.format(value), s_conn)
-    ch =  dt.DataTable(
-        data=s_df.to_dict('records'),
-        columns=[{'id': c, 'name': c} for c in s_df.columns])
-    params.append(ch)
-    #s_cur = s_conn.cursor()
-    #s_cur.execute("""SELECT ppt."ParamName", ppt."ID_Param", pp."ID_PP" FROM "PointParams" pp JOIN "PointParamTypes" ppt ON pp."ID_Param" = ppt."ID_Param" WHERE pp."ID_Point" = {}""".format(value))
-    #ps = s_cur.fetchall()
-    #for i in ps:
-    #    p = html.Button(i[0],id={'type': 'param_button', 'index': format(i[2])},value=format(i[1]), n_clicks=0)
-    #    params.append(p)
-    s_cur = s_conn.cursor()
-    s_cur.execute("""SELECT * FROM "Points" WHERE "ID_Point" = {}""".format(value))
-    btn = s_cur.fetchone()
-    ch = html.Div([
-        html.Button(btn[1],id={'type': 'mp_button', 'index': format(id)},value=format(id), n_clicks=0),
-        html.Div(id={'type': 'mp_div', 'index': format(id)}, children = params, style= {'display': 'block'})
-        ], style={'padding-left': '150px'})
-    return ch
-    
-
-def generate_structures(id, value):
-    mp = []
-    p_cur = p_conn.cursor()
-    p_cur.execute("""SELECT * FROM "Prototype_MeasuringPoint" WHERE "lowlevel_structure_id" = {}""".format(id))
-    mps = p_cur.fetchall()
-    for i in mps:
-        mp.append(generate_low_level_structures(i[0],i[2]))
-    s_cur = s_conn.cursor()
-    s_cur.execute("""SELECT * FROM "Points" WHERE "ID_Point" = {}""".format(value))
-    btn = s_cur.fetchone()
-    ch = html.Div([
-        html.Button(btn[1],id={'type': 'll_structure_button', 'index': format(id)},value=format(id), n_clicks=0),
-        html.Div(id={'type': 'll_structure_div', 'index': format(id)}, children = mp, style= {'display': 'none'})
-        ], style={'padding-left': '100px'})
-    return ch
-
-def generate_button(name, id, value):
-    structures = []
-    p_cur = p_conn.cursor()
-    p_cur.execute("""SELECT * FROM "Prototype_Structures" WHERE "main_id" = {}""".format(id))
-    chs = p_cur.fetchall()
-    for i in chs:
-        p_cur.execute("""SELECT * FROM "Prototype_LowLevel_Structures" WHERE "structure_id" = {}""".format(i[0]))
-        lls = p_cur.fetchall();
-        ll_structures = []
-        for j in lls:
-            ll_structures.append(generate_structures(j[0],j[2]))
-        s_cur = s_conn.cursor()
-        s_cur.execute("""SELECT * FROM "Points" WHERE "ID_Point" = {}""".format(i[2]))
-        btn = s_cur.fetchone()
-        ch = html.Div([
-            html.Button(btn[1],id={'type': 'structure_button', 'index': format(i[0])},value=format(i[2]), n_clicks=0),
-            html.Div(id={'type': 'structure_div', 'index': format(id)}, children = ll_structures, style= {'display': 'none'})
-            ], style={'padding-left': '50px'})
-        structures.append(ch)
-    b = html.Button(name,id={'type': 'main_button', 'index': format(id)},value=(value), n_clicks=0)
-    return html.Div([
-        html.Div([b], id=f"pop_for_main_button_{id}"),
-        html.Div(id={'type': 'main_div', 'index': id}, children = structures, style= {'display': 'none'}),
-        dbc.Popover([dbc.PopoverHeader(children=html.Button(id={'type': 'close_button', 'index': id})),
-                dbc.PopoverBody(read_key_params("main",id))],id={'type': 'main_pop', 'index': id},target=f"pop_for_main_button_{id}", is_open=False)
-        ])
-
-def generate_page():
-    cur = p_conn.cursor()
-    cur.execute('SELECT * FROM "Prototype_Main"')
-    buttons = cur.fetchall()
-    children = []
-    for button in buttons:
-        children.append(generate_button(button[1],button[0],button[3]))
-        children.append(html.Br())
-    cur.close()
-    return children
-
 nav = Navbar()            # Подключаем код навигационной панели
 sidebar = Sidebar()       # Подключаем код левого меню
 
@@ -138,7 +34,6 @@ preload_page = dbc.Fade(id='pr_load',children=[
                 )
 
 app.layout = html.Div([
-    html.Div(children=generate_page()),
     dcc.Location(id='url', refresh=False),
     preload_page,
     nav,    

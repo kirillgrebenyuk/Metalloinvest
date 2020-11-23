@@ -65,6 +65,7 @@
   <ItemGroup>
     <Folder Include="assets\" />
     <Folder Include="assets\images\" />
+    <Folder Include="pages\" />
     <Folder Include="test\" />
     <Folder Include="test\assets\" />
   </ItemGroup>
